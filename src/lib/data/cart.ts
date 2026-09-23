@@ -18,8 +18,6 @@ import { getLocale } from "@lib/data/locale-actions"
 
 /**
  * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
- * @param cartId - optional - The ID of the cart to retrieve.
- * @returns The cart object if found, or null if not found.
  */
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
@@ -135,13 +133,16 @@ export async function addToCart({
 
   const headers = {
     ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
-  // 1. Resolve the vendor offer_id for this variant from your database/backend
-  let offerId = variantId
+  // 1. Fetch the multi-vendor offer for this variant from Mercur /store/offers
+  let offerId: string | null = null
   try {
-    const productRes = await sdk.client.fetch<any>(
-      `/store/products?fields=*variants.offers`,
+    const offerRes = await sdk.client.fetch<{ offers: { id: string }[] }>(
+      `/store/offers?variant_id=${variantId}`,
       {
         method: "GET",
         headers,
@@ -149,29 +150,25 @@ export async function addToCart({
       }
     )
 
-    for (const prod of productRes.products || []) {
-      const matchedVariant = (prod.variants || []).find((v: any) => v.id === variantId)
-      if (matchedVariant?.offers?.[0]?.id) {
-        offerId = matchedVariant.offers[0].id
-        break
-      }
+    if (offerRes?.offers && offerRes.offers.length > 0) {
+      offerId = offerRes.offers[0].id
     }
   } catch (err) {
-    console.warn("Could not query variant offers, falling back to variant ID:", err)
+    console.error("Error querying /store/offers:", err)
   }
 
-  // 2. Add line-item to cart using offer_id
+  // 2. Send offer_id payload to the cart line-items endpoint
   const payload: Record<string, any> = {
     quantity,
   }
-  
-  if (offerId.startsWith("offer_")) {
+
+  if (offerId) {
     payload.offer_id = offerId
   } else {
     payload.variant_id = variantId
   }
 
-  await sdk.client
+  return await sdk.client
     .fetch(`/store/carts/${cart.id}/line-items`, {
       method: "POST",
       headers,
@@ -326,7 +323,6 @@ export async function submitPromotionForm(
   }
 }
 
-// TODO: Pass a POJO instead of a form entity here
 export async function setAddresses(currentState: unknown, formData: FormData) {
   try {
     if (!formData) {
@@ -379,11 +375,6 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
   )
 }
 
-/**
- * Places an order for a cart. If no cart ID is provided, it will use the cart ID from the cookies.
- * @param cartId - optional - The ID of the cart to place an order for.
- * @returns The cart object if the order was successful, or null if not.
- */
 export async function placeOrder(cartId?: string) {
   const id = cartId || (await getCartId())
 
@@ -418,11 +409,6 @@ export async function placeOrder(cartId?: string) {
   return cartRes.cart
 }
 
-/**
- * Updates the countrycode param and revalidates the regions cache
- * @param regionId
- * @param countryCode
- */
 export async function updateRegion(countryCode: string, currentPath: string) {
   const cartId = await getCartId()
   const region = await getRegion(countryCode)
