@@ -32,6 +32,18 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "cdn.jsdelivr.net",
+      },
+      {
+        protocol: "https",
+        hostname: "api.nearsy.store",
+      },
+      {
+        protocol: "http",
+        hostname: "api.nearsy.store",
+      },
+      {
+        protocol: "https",
         hostname: "medusa-public-images.s3.eu-west-1.amazonaws.com",
       },
       {
