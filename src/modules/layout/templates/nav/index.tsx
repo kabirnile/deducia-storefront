@@ -10,7 +10,7 @@ export default async function Nav() {
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
-      {/* TOP BLACK STRIP: REGISTER TO SELL & VENDOR LOGIN */}
+      {/* TOP BLACK STRIP: REGISTER SHOP TO api.nearsy.store/seller/ */}
       <div className="bg-neutral-950 text-white text-xs py-2 px-4 border-b border-neutral-800">
         <div className="content-container flex items-center justify-between mx-auto">
           <span className="hidden sm:inline text-neutral-300 font-medium">
@@ -19,12 +19,12 @@ export default async function Nav() {
           <div className="flex items-center gap-x-4 ml-auto">
             <span className="text-neutral-400">Want to sell on Aligarh Marketplace?</span>
             <a
-              href="https://api.nearsy.store/app"
+              href="https://api.nearsy.store/seller/"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
             >
-              Register to Sell / Vendor Login →
+              Register Shop / Vendor Login →
             </a>
           </div>
         </div>

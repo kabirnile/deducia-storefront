@@ -15,7 +15,7 @@ export const listCartShippingMethods = async (cartId: string) => {
   }
 
   return sdk.client
-    .fetch<HttpTypes.StoreShippingOptionListResponse>(
+    .fetch<any>(
       `/store/shipping-options`,
       {
         method: "GET",
@@ -23,12 +23,25 @@ export const listCartShippingMethods = async (cartId: string) => {
           cart_id: cartId,
         },
         headers,
-        cache: "no-store",
+        cache: "no-store", // Crucial: prevents Next.js from caching empty states
       }
     )
     .then((res: any) => {
+      // 1. If it's already a flat array, return it
       if (Array.isArray(res)) return res
       if (Array.isArray(res?.shipping_options)) return res.shipping_options
+
+      // 2. If it's a multi-vendor grouped object { "sel_123": [...] }, flatten it
+      if (res?.shipping_options && typeof res.shipping_options === "object") {
+        const flattenedOptions: HttpTypes.StoreCartShippingOption[] = []
+        Object.values(res.shipping_options).forEach((vendorOptions: any) => {
+          if (Array.isArray(vendorOptions)) {
+            flattenedOptions.push(...vendorOptions)
+          }
+        })
+        return flattenedOptions
+      }
+
       return []
     })
     .catch((err) => {

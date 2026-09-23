@@ -17,12 +17,12 @@ export default function CheckoutLayout({
           <div className="flex items-center gap-x-4 ml-auto">
             <span className="text-neutral-400">Merchant Portal:</span>
             <a
-              href="https://api.nearsy.store/app"
+              href="https://api.nearsy.store/seller/"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
             >
-              Register to Sell / Vendor Login →
+              Register Shop / Vendor Login →
             </a>
           </div>
         </div>
