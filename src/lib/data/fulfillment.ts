@@ -26,9 +26,13 @@ export const listCartShippingMethods = async (cartId: string) => {
         cache: "force-cache",
       }
     )
-    .then(({ shipping_options }) => shipping_options)
+    .then((res: any) => {
+      if (Array.isArray(res)) return res
+      if (Array.isArray(res?.shipping_options)) return res.shipping_options
+      return []
+    })
     .catch(() => {
-      return null
+      return [] as HttpTypes.StoreCartShippingOption[]
     })
 }
 
@@ -45,7 +49,7 @@ export const calculatePriceForShippingOption = async (
     ...(await getCacheOptions("fulfillment")),
   }
 
-  const body = { cart_id: cartId, data }
+  const body: Record<string, any> = { cart_id: cartId }
 
   if (data) {
     body.data = data
@@ -62,7 +66,7 @@ export const calculatePriceForShippingOption = async (
       }
     )
     .then(({ shipping_option }) => shipping_option)
-    .catch((e) => {
+    .catch(() => {
       return null
     })
 }

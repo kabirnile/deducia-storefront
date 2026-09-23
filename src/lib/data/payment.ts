@@ -17,19 +17,24 @@ export const listCartPaymentMethods = async (regionId: string) => {
     .fetch<HttpTypes.StorePaymentProviderListResponse>(
       `/store/payment-providers`,
       {
-        method: "GET",
         query: { region_id: regionId },
         headers,
         next,
         cache: "force-cache",
       }
     )
-    .then(({ payment_providers }) =>
-      payment_providers.sort((a, b) => {
-        return a.id > b.id ? 1 : -1
+    .then((res: any) => {
+      const providers = Array.isArray(res)
+        ? res
+        : Array.isArray(res?.payment_providers)
+        ? res.payment_providers
+        : []
+
+      return providers.sort((a: any, b: any) => {
+        return (a?.id || "") > (b?.id || "") ? 1 : -1
       })
-    )
+    })
     .catch(() => {
-      return null
+      return [] as HttpTypes.StorePaymentProvider[]
     })
 }

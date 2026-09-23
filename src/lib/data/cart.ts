@@ -22,7 +22,7 @@ import { getLocale } from "@lib/data/locale-actions"
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields ??=
-    "*items, *region, *region.countries, *shipping_address, *billing_address, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name"
+    "*items, *region, *region.countries, *shipping_address, *billing_address, *items.product, *items.variant, *items.thumbnail, *items.metadata, +items.total, *promotions, *shipping_methods"
 
   if (!id) {
     return null
@@ -138,7 +138,7 @@ export async function addToCart({
       : {}),
   }
 
-  // 1. Fetch the multi-vendor offer for this variant from Mercur /store/offers
+  // 1. Resolve the multi-vendor offer for this variant from Mercur /store/offers
   let offerId: string | null = null
   try {
     const offerRes = await sdk.client.fetch<{ offers: { id: string }[] }>(
@@ -315,11 +315,15 @@ export async function submitPromotionForm(
   currentState: unknown,
   formData: FormData
 ) {
-  const code = formData.get("code") as string
+  const code = (formData.get("code") as string)?.trim()
+  if (!code) {
+    return "Please enter a promotion code"
+  }
   try {
     await applyPromotions([code])
+    return null
   } catch (e: any) {
-    return e.message
+    return e?.message || "Invalid promotion code"
   }
 }
 
@@ -434,6 +438,8 @@ export async function updateRegion(countryCode: string, currentPath: string) {
 
 export async function listCartOptions() {
   const cartId = await getCartId()
+  if (!cartId) return []
+
   const headers = {
     ...(await getAuthHeaders()),
   }
@@ -441,12 +447,19 @@ export async function listCartOptions() {
     ...(await getCacheOptions("shippingOptions")),
   }
 
-  return await sdk.client.fetch<{
-    shipping_options: HttpTypes.StoreCartShippingOption[]
-  }>("/store/shipping-options", {
-    query: { cart_id: cartId },
-    next,
-    headers,
-    cache: "force-cache",
-  })
+  return await sdk.client
+    .fetch<{
+      shipping_options: HttpTypes.StoreCartShippingOption[]
+    }>("/store/shipping-options", {
+      query: { cart_id: cartId },
+      next,
+      headers,
+      cache: "force-cache",
+    })
+    .then((res: any) => {
+      if (Array.isArray(res)) return res
+      if (Array.isArray(res?.shipping_options)) return res.shipping_options
+      return []
+    })
+    .catch(() => [] as HttpTypes.StoreCartShippingOption[])
 }
