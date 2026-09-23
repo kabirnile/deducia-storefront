@@ -137,16 +137,46 @@ export async function addToCart({
     ...(await getAuthHeaders()),
   }
 
-  await sdk.store.cart
-    .createLineItem(
-      cart.id,
+  // 1. Resolve the vendor offer_id for this variant from your database/backend
+  let offerId = variantId
+  try {
+    const productRes = await sdk.client.fetch<any>(
+      `/store/products?fields=*variants.offers`,
       {
-        variant_id: variantId,
-        quantity,
-      },
-      {},
-      headers
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }
     )
+
+    for (const prod of productRes.products || []) {
+      const matchedVariant = (prod.variants || []).find((v: any) => v.id === variantId)
+      if (matchedVariant?.offers?.[0]?.id) {
+        offerId = matchedVariant.offers[0].id
+        break
+      }
+    }
+  } catch (err) {
+    console.warn("Could not query variant offers, falling back to variant ID:", err)
+  }
+
+  // 2. Add line-item to cart using offer_id
+  const payload: Record<string, any> = {
+    quantity,
+  }
+  
+  if (offerId.startsWith("offer_")) {
+    payload.offer_id = offerId
+  } else {
+    payload.variant_id = variantId
+  }
+
+  await sdk.client
+    .fetch(`/store/carts/${cart.id}/line-items`, {
+      method: "POST",
+      headers,
+      body: payload,
+    })
     .then(async () => {
       const cartCacheTag = await getCacheTag("carts")
       revalidateTag(cartCacheTag)
@@ -278,48 +308,11 @@ export async function applyPromotions(codes: string[]) {
     .catch(medusaError)
 }
 
-export async function applyGiftCard(code: string) {
-  //   const cartId = getCartId()
-  //   if (!cartId) return "No cartId cookie found"
-  //   try {
-  //     await updateCart(cartId, { gift_cards: [{ code }] }).then(() => {
-  //       revalidateTag("cart")
-  //     })
-  //   } catch (error: any) {
-  //     throw error
-  //   }
-}
+export async function applyGiftCard(code: string) {}
 
-export async function removeDiscount(code: string) {
-  // const cartId = getCartId()
-  // if (!cartId) return "No cartId cookie found"
-  // try {
-  //   await deleteDiscount(cartId, code)
-  //   revalidateTag("cart")
-  // } catch (error: any) {
-  //   throw error
-  // }
-}
+export async function removeDiscount(code: string) {}
 
-export async function removeGiftCard(
-  codeToRemove: string,
-  giftCards: any[]
-  // giftCards: GiftCard[]
-) {
-  //   const cartId = getCartId()
-  //   if (!cartId) return "No cartId cookie found"
-  //   try {
-  //     await updateCart(cartId, {
-  //       gift_cards: [...giftCards]
-  //         .filter((gc) => gc.code !== codeToRemove)
-  //         .map((gc) => ({ code: gc.code })),
-  //     }).then(() => {
-  //       revalidateTag("cart")
-  //     })
-  //   } catch (error: any) {
-  //     throw error
-  //   }
-}
+export async function removeGiftCard(codeToRemove: string, giftCards: any[]) {}
 
 export async function submitPromotionForm(
   currentState: unknown,
