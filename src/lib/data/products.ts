@@ -4,8 +4,55 @@ import { sdk } from "@lib/config"
 import { sortProducts } from "@lib/util/sort-products"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { getAuthHeaders } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
+
+/**
+ * Universally sanitizes any image URL containing localhost:9000 or 127.0.0.1:9000
+ * to the live backend domain (https://api.nearsy.store).
+ */
+function cleanUrl(url?: string | null): string | null {
+  if (!url) return null
+  return url
+    .replace(/http:\/\/localhost:9000/g, "https://api.nearsy.store")
+    .replace(/http:\/\/127\.0\.0\.1:9000/g, "https://api.nearsy.store")
+}
+
+/**
+ * Recursively ensures all product images, thumbnails, and variant assets
+ * are clean, accessible live URLs.
+ */
+function sanitizeProductAssets(product: HttpTypes.StoreProduct): HttpTypes.StoreProduct {
+  if (!product) return product
+
+  const sanitized = { ...product }
+
+  if (sanitized.thumbnail) {
+    sanitized.thumbnail = cleanUrl(sanitized.thumbnail)
+  }
+
+  if (Array.isArray(sanitized.images)) {
+    sanitized.images = sanitized.images.map((img: any) => ({
+      ...img,
+      url: cleanUrl(img.url) || img.url,
+    }))
+  }
+
+  if (Array.isArray(sanitized.variants)) {
+    sanitized.variants = sanitized.variants.map((v: any) => {
+      const vCopy = { ...v }
+      if (Array.isArray(vCopy.images)) {
+        vCopy.images = vCopy.images.map((vImg: any) => ({
+          ...vImg,
+          url: cleanUrl(vImg.url) || vImg.url,
+        }))
+      }
+      return vCopy
+    })
+  }
+
+  return sanitized
+}
 
 export const listProducts = async ({
   pageParam = 1,
@@ -14,7 +61,7 @@ export const listProducts = async ({
   regionId,
 }: {
   pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams & { q?: string }
   countryCode?: string
   regionId?: string
 }): Promise<{
@@ -47,10 +94,9 @@ export const listProducts = async ({
 
   const headers = {
     ...(await getAuthHeaders()),
-  }
-
-  const next = {
-    ...(await getCacheOptions("products")),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
   return sdk.client
@@ -63,31 +109,39 @@ export const listProducts = async ({
           offset,
           region_id: region?.id,
           fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,+metadata,+tags,",
+            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*thumbnail,*images,+metadata,+tags",
           ...queryParams,
         },
         headers,
-        next,
-        cache: "force-cache",
+        cache: "no-store", // Universal sync: never serves stale product cache
       }
     )
     .then(({ products, count }) => {
       const nextPage = count > offset + limit ? pageParam + 1 : null
+      const cleanProducts = (products || []).map(sanitizeProductAssets)
 
       return {
         response: {
-          products,
+          products: cleanProducts,
           count,
         },
-        nextPage: nextPage,
+        nextPage,
+        queryParams,
+      }
+    })
+    .catch((err) => {
+      console.error("Error fetching products list:", err)
+      return {
+        response: { products: [], count: 0 },
+        nextPage: null,
         queryParams,
       }
     })
 }
 
 /**
- * This will fetch 100 products to the Next.js cache and sort them based on the sortBy parameter.
- * It will then return the paginated products based on the page and limit parameters.
+ * Fetches products live from backend, applies universal asset sanitization,
+ * sorts them dynamically, and handles pagination.
  */
 export const listProductsWithSort = async ({
   page = 0,
@@ -96,7 +150,7 @@ export const listProductsWithSort = async ({
   countryCode,
 }: {
   page?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams & { q?: string }
   sortBy?: SortOptions
   countryCode: string
 }): Promise<{
@@ -109,7 +163,7 @@ export const listProductsWithSort = async ({
   const {
     response: { products, count },
   } = await listProducts({
-    pageParam: 0,
+    pageParam: 1,
     queryParams: {
       ...queryParams,
       limit: 100,
@@ -118,11 +172,9 @@ export const listProductsWithSort = async ({
   })
 
   const sortedProducts = sortProducts(products, sortBy)
-
-  const pageParam = (page - 1) * limit
-
-  const nextPage = count > pageParam + limit ? pageParam + limit : null
-
+  const safePage = Math.max(page, 1)
+  const pageParam = (safePage - 1) * limit
+  const nextPage = count > pageParam + limit ? safePage + 1 : null
   const paginatedProducts = sortedProducts.slice(pageParam, pageParam + limit)
 
   return {

@@ -1,13 +1,13 @@
-import { Container, clx } from "@medusajs/ui"
-import Image from "next/image"
+import { Image as MedusaImage } from "@medusajs/medusa"
 import React from "react"
-
+import Image from "next/image"
+import { clx } from "@medusajs/ui"
 import PlaceholderImage from "@modules/common/icons/placeholder-image"
+import { sanitizeImageUrl } from "@lib/util/sanitize-image-url"
 
 type ThumbnailProps = {
   thumbnail?: string | null
-  // TODO: Fix image typings
-  images?: any[] | null
+  images?: MedusaImage[] | null
   size?: "small" | "medium" | "large" | "full" | "square"
   isFeatured?: boolean
   className?: string
@@ -22,12 +22,13 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
   className,
   "data-testid": dataTestid,
 }) => {
-  const initialImage = thumbnail || images?.[0]?.url
+  const rawImage = thumbnail || images?.[0]?.url
+  const initialImage = rawImage ? sanitizeImageUrl(rawImage) : null
 
   return (
-    <Container
+    <div
       className={clx(
-        "relative w-full overflow-hidden p-4 bg-ui-bg-subtle shadow-elevation-card-rest rounded-large group-hover:shadow-elevation-card-hover transition-shadow ease-in-out duration-150",
+        "relative w-full overflow-hidden p-4 bg-neutral-100 shadow-list rounded-large group-hover:shadow-elevation-card-rest transition-shadow ease-in-out duration-150",
         className,
         {
           "aspect-[11/14]": isFeatured,
@@ -42,21 +43,24 @@ const Thumbnail: React.FC<ThumbnailProps> = ({
       data-testid={dataTestid}
     >
       <ImageOrPlaceholder image={initialImage} size={size} />
-    </Container>
+    </div>
   )
 }
 
 const ImageOrPlaceholder = ({
   image,
   size,
-}: Pick<ThumbnailProps, "size"> & { image?: string }) => {
+}: {
+  image?: string | null
+  size?: ThumbnailProps["size"]
+}) => {
   return image ? (
     <Image
       src={image}
       alt="Thumbnail"
       className="absolute inset-0 object-cover object-center"
       draggable={false}
-      quality={50}
+      quality={80}
       sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
       fill
     />

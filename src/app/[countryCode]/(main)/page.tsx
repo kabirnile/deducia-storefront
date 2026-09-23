@@ -6,6 +6,8 @@ import Hero from "@modules/home/components/hero"
 import ProductPreview from "@modules/products/components/product-preview"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
+export const revalidate = 0 // Never serve stale cache: always live data
+
 export const metadata: Metadata = {
   title: "Marketplace | Multi-Vendor Store",
   description: "Premier multi-vendor marketplace connecting verified independent sellers.",
@@ -18,12 +20,14 @@ export default async function Home(props: {
   const { countryCode } = params
 
   const region = await getRegion(countryCode)
-  const categories = await listCategories()
+  const categories = await listCategories({
+    fields: "id,name,handle,description",
+  })
   const { response } = await listProducts({
     countryCode,
     queryParams: {
-      limit: 50,
-      fields: "*variants.calculated_price",
+      limit: 100,
+      fields: "*variants.calculated_price,*thumbnail,*images",
     },
   })
 
@@ -33,7 +37,7 @@ export default async function Home(props: {
 
   return (
     <div className="w-full flex flex-col gap-y-12 pb-16">
-      {/* 1. HERO 5-BANNER CAROUSEL */}
+      {/* 1. HERO 5-BANNER CAROUSEL WITH FIND PRODUCTS */}
       <Hero />
 
       {/* 2. EXPLORE CATEGORIES */}
@@ -59,12 +63,14 @@ export default async function Home(props: {
               <LocalizedClientLink
                 key={cat.id}
                 href={`/categories/${cat.handle}`}
-                className="p-4 bg-neutral-50 hover:bg-neutral-100 rounded-xl border border-neutral-200 transition-colors flex flex-col justify-between h-24"
+                className="p-4 bg-white hover:bg-neutral-50 rounded-xl border border-neutral-300 transition-all flex flex-col justify-between h-24 shadow-sm hover:border-neutral-900 group"
               >
-                <span className="font-semibold text-sm text-neutral-800">
-                  {cat.name}
+                <span className="font-bold text-sm sm:text-base text-neutral-950 group-hover:text-black">
+                  {cat.name || cat.handle}
                 </span>
-                <span className="text-xs text-neutral-500">Shop category →</span>
+                <span className="text-xs font-semibold text-neutral-600 group-hover:text-black">
+                  Shop category →
+                </span>
               </LocalizedClientLink>
             ))}
           </div>
