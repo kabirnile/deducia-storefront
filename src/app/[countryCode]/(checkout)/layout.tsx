@@ -1,6 +1,5 @@
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ChevronDown from "@modules/common/icons/chevron-down"
-import MedusaCTA from "@modules/layout/components/medusa-cta"
 
 export default function CheckoutLayout({
   children,
@@ -9,7 +8,27 @@ export default function CheckoutLayout({
 }) {
   return (
     <div className="w-full bg-white relative small:min-h-screen">
-      <div className="h-16 bg-white border-b ">
+      {/* TOP BLACK STRIP */}
+      <div className="bg-neutral-950 text-white text-xs py-2 px-4 border-b border-neutral-800">
+        <div className="content-container flex items-center justify-between mx-auto">
+          <span className="hidden sm:inline text-neutral-300 font-medium">
+            Powered by <strong className="text-white">Deducia Inc.</strong>
+          </span>
+          <div className="flex items-center gap-x-4 ml-auto">
+            <span className="text-neutral-400">Merchant Portal:</span>
+            <a
+              href="https://api.nearsy.store/app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Register to Sell / Vendor Login →
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-16 bg-white border-b">
         <nav className="flex h-full items-center content-container justify-between">
           <LocalizedClientLink
             href="/cart"
@@ -17,7 +36,7 @@ export default function CheckoutLayout({
             data-testid="back-to-cart-link"
           >
             <ChevronDown className="rotate-90" size={16} />
-            <span className="mt-px hidden small:block txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base ">
+            <span className="mt-px hidden small:inline txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base">
               Back to shopping cart
             </span>
             <span className="mt-px block small:hidden txt-compact-plus text-ui-fg-subtle hover:text-ui-fg-base">
@@ -26,17 +45,19 @@ export default function CheckoutLayout({
           </LocalizedClientLink>
           <LocalizedClientLink
             href="/"
-            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase"
+            className="txt-compact-xlarge-plus text-ui-fg-subtle hover:text-ui-fg-base uppercase font-bold tracking-wider"
             data-testid="store-link"
           >
-            Medusa Store
+            Aligarh Marketplace
           </LocalizedClientLink>
           <div className="flex-1 basis-0" />
         </nav>
       </div>
-      <div className="relative" data-testid="checkout-container">{children}</div>
-      <div className="py-4 w-full flex items-center justify-center">
-        <MedusaCTA />
+      <div className="relative" data-testid="checkout-container">
+        {children}
+      </div>
+      <div className="py-4 w-full flex items-center justify-center border-t text-xs text-neutral-500">
+        Powered by Deducia Inc.
       </div>
     </div>
   )

@@ -2,15 +2,16 @@
 
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { getAuthHeaders } from "./cookies"
 
 export const listCartShippingMethods = async (cartId: string) => {
+  if (!cartId) return []
+
   const headers = {
     ...(await getAuthHeaders()),
-  }
-
-  const next = {
-    ...(await getCacheOptions("fulfillment")),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
   return sdk.client
@@ -22,8 +23,7 @@ export const listCartShippingMethods = async (cartId: string) => {
           cart_id: cartId,
         },
         headers,
-        next,
-        cache: "force-cache",
+        cache: "no-store",
       }
     )
     .then((res: any) => {
@@ -31,7 +31,8 @@ export const listCartShippingMethods = async (cartId: string) => {
       if (Array.isArray(res?.shipping_options)) return res.shipping_options
       return []
     })
-    .catch(() => {
+    .catch((err) => {
+      console.error("Error fetching shipping methods:", err)
       return [] as HttpTypes.StoreCartShippingOption[]
     })
 }
@@ -43,10 +44,9 @@ export const calculatePriceForShippingOption = async (
 ) => {
   const headers = {
     ...(await getAuthHeaders()),
-  }
-
-  const next = {
-    ...(await getCacheOptions("fulfillment")),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
   const body: Record<string, any> = { cart_id: cartId }
@@ -62,11 +62,9 @@ export const calculatePriceForShippingOption = async (
         method: "POST",
         body,
         headers,
-        next,
+        cache: "no-store",
       }
     )
     .then(({ shipping_option }) => shipping_option)
-    .catch(() => {
-      return null
-    })
+    .catch(() => null)
 }
