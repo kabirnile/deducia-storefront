@@ -94,7 +94,6 @@ export default function ProductActions({
     router.replace(pathname + "?" + params.toString())
   }, [selectedVariant, isValidVariant])
 
-  // Inventory tracking logic
   const inStock = useMemo(() => {
     if (!selectedVariant) return false
     if (!selectedVariant.manage_inventory) return true
@@ -132,7 +131,6 @@ export default function ProductActions({
     }
   }
 
-  // Button text logic
   const buttonText = useMemo(() => {
     if (!selectedVariant) {
       return "Select options"
@@ -183,8 +181,8 @@ export default function ProductActions({
             !isValidVariant
           }
           variant="primary"
-          className={`w-full h-10 transition-colors duration-200 ${
-            isAdded ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white" : ""
+          className={`w-full h-10 transition-all duration-200 ${
+            isAdded ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white font-medium" : ""
           }`}
           isLoading={isAdding}
           data-testid="add-product-button"
