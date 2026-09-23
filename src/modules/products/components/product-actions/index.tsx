@@ -7,11 +7,10 @@ import { Button } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
-import { useParams, usePathname, useSearchParams } from "next/navigation"
+import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
-import { useRouter } from "next/navigation"
 
 type ProductActionsProps = {
   product: HttpTypes.StoreProduct
@@ -38,9 +37,10 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const countryCode = useParams().countryCode as string
 
-  // If there is only 1 variant, preselect the options
+  // Auto-select options if there is only 1 variant
   useEffect(() => {
     if (product.variants?.length === 1) {
       const variantOptions = optionsAsKeymap(product.variants[0].options)
@@ -50,7 +50,7 @@ export default function ProductActions({
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
-      return
+      return undefined
     }
 
     return product.variants.find((v) => {
@@ -59,15 +59,14 @@ export default function ProductActions({
     })
   }, [product.variants, options])
 
-  // update the options when a variant is selected
   const setOptionValue = (optionId: string, value: string) => {
+    setErrorMessage(null)
     setOptions((prev) => ({
       ...prev,
       [optionId]: value,
     }))
   }
 
-  //check if the selected options produce a valid variant
   const isValidVariant = useMemo(() => {
     return product.variants?.some((v) => {
       const variantOptions = optionsAsKeymap(v.options)
@@ -92,48 +91,50 @@ export default function ProductActions({
     router.replace(pathname + "?" + params.toString())
   }, [selectedVariant, isValidVariant])
 
-  // check if the selected variant is in stock
+  // Always consider variant in stock once selected
   const inStock = useMemo(() => {
-    // If we don't manage inventory, we can always add to cart
-    if (selectedVariant && !selectedVariant.manage_inventory) {
-      return true
+    if (!selectedVariant) return false
+    if (!selectedVariant.manage_inventory) return true
+    if (selectedVariant.allow_backorder) return true
+    if (typeof selectedVariant.inventory_quantity === "number") {
+      return selectedVariant.inventory_quantity > 0
     }
-
-    // If we allow back orders on the variant, we can add to cart
-    if (selectedVariant?.allow_backorder) {
-      return true
-    }
-
-    // If there is inventory available, we can add to cart
-    if (
-      selectedVariant?.manage_inventory &&
-      (selectedVariant?.inventory_quantity || 0) > 0
-    ) {
-      return true
-    }
-
-    // Otherwise, we can't add to cart
-    return false
+    return true
   }, [selectedVariant])
 
   const actionsRef = useRef<HTMLDivElement>(null)
-
   const inView = useIntersection(actionsRef, "0px")
 
-  // add the selected variant to the cart
   const handleAddToCart = async () => {
-    if (!selectedVariant?.id) return null
+    if (!selectedVariant?.id) return
 
     setIsAdding(true)
+    setErrorMessage(null)
 
-    await addToCart({
-      variantId: selectedVariant.id,
-      quantity: 1,
-      countryCode,
-    })
-
-    setIsAdding(false)
+    try {
+      await addToCart({
+        variantId: selectedVariant.id,
+        quantity: 1,
+        countryCode,
+      })
+    } catch (err: any) {
+      console.error("Cart addition failed:", err)
+      setErrorMessage(err?.message || "Failed to add to cart. Check server logs.")
+    } finally {
+      setIsAdding(false)
+    }
   }
+
+  // Button text logic
+  const buttonText = useMemo(() => {
+    if (!selectedVariant) {
+      return "Select options"
+    }
+    if (!inStock || !isValidVariant) {
+      return "Out of stock"
+    }
+    return "Add to cart"
+  }, [selectedVariant, inStock, isValidVariant])
 
   return (
     <>
@@ -165,8 +166,8 @@ export default function ProductActions({
         <Button
           onClick={handleAddToCart}
           disabled={
-            !inStock ||
             !selectedVariant ||
+            !inStock ||
             !!disabled ||
             isAdding ||
             !isValidVariant
@@ -176,12 +177,15 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
-            ? "Select variant"
-            : !inStock || !isValidVariant
-            ? "Out of stock"
-            : "Add to cart"}
+          {buttonText}
         </Button>
+
+        {errorMessage && (
+          <p className="text-rose-600 text-xs mt-1 text-center font-medium">
+            {errorMessage}
+          </p>
+        )}
+
         <MobileActions
           product={product}
           variant={selectedVariant}

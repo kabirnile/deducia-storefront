@@ -62,7 +62,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
         <Transition
           as={Fragment}
           show={show}
-          enter="ease-in-out duration-300"
+          enter="ease-out duration-300"
           enterFrom="opacity-0"
           enterTo="opacity-100"
           leave="ease-in duration-300"
@@ -95,44 +95,45 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   </span>
                 </div>
               ) : (
-                <div></div>
+                <div />
               )}
             </div>
-            <div className={clx("grid grid-cols-2 w-full gap-x-4", {
-              "!grid-cols-1": isSimple
-            })}>
-              {!isSimple && <Button
-                onClick={open}
-                variant="secondary"
-                className="w-full"
-                data-testid="mobile-actions-button"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>
-                    {variant
-                      ? Object.values(options).join(" / ")
-                      : "Select Options"}
-                  </span>
-                  <ChevronDown />
-                </div>
-              </Button>}
+            <div
+              className={clx("grid grid-cols-2 w-full gap-x-4", {
+                "!grid-cols-1": isSimple,
+              })}
+            >
+              {!isSimple && (
+                <Button
+                  onClick={open}
+                  variant="secondary"
+                  className="w-full"
+                  data-testid="mobile-actions-button"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <span>
+                      {variant
+                        ? Object.values(options).filter(Boolean).join(" / ")
+                        : "Select options"}
+                    </span>
+                    <ChevronDown />
+                  </div>
+                </Button>
+              )}
               <Button
                 onClick={handleAddToCart}
-                disabled={!inStock || !variant}
+                disabled={!variant || !inStock}
                 className="w-full"
                 isLoading={isAdding}
                 data-testid="mobile-cart-button"
               >
-                {!variant
-                  ? "Select variant"
-                  : !inStock
-                  ? "Out of stock"
-                  : "Add to cart"}
+                {!variant ? "Select options" : !inStock ? "Out of stock" : "Add to cart"}
               </Button>
             </div>
           </div>
         </Transition>
       </div>
+
       <Transition appear show={state} as={Fragment}>
         <Dialog as="div" className="relative z-[75]" onClose={close}>
           <Transition.Child
