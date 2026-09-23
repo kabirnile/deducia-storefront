@@ -10,21 +10,20 @@ export default async function Nav() {
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
-      {/* TOP BLACK STRIP: REGISTER SHOP TO api.nearsy.store/seller/ */}
+      {/* TOP STRIP */}
       <div className="bg-neutral-950 text-white text-xs py-2 px-4 border-b border-neutral-800">
         <div className="content-container flex items-center justify-between mx-auto">
-          <span className="hidden sm:inline text-neutral-300 font-medium">
-            Powered by <strong className="text-white">Deducia Inc.</strong> | Fast Hyperlocal Delivery
+          <span className="text-neutral-400 text-xs hidden sm:inline">
+            Hyperlocal Delivery & Verified Independent Sellers
           </span>
-          <div className="flex items-center gap-x-4 ml-auto">
-            <span className="text-neutral-400">Want to sell on Aligarh Marketplace?</span>
+          <div className="flex items-center gap-x-3 ml-auto">
             <a
               href="https://api.nearsy.store/seller/"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+              className="bg-black hover:bg-neutral-900 text-white border border-neutral-700 px-4 py-1 rounded-md text-xs font-semibold tracking-wide transition-all shadow-sm"
             >
-              Register Shop / Vendor Login →
+              Sell
             </a>
           </div>
         </div>
@@ -44,7 +43,7 @@ export default async function Nav() {
               className="txt-compact-xlarge-plus hover:text-ui-fg-base uppercase font-bold tracking-wider text-neutral-900"
               data-testid="nav-store-link"
             >
-              Aligarh Marketplace
+              Marketplace
             </LocalizedClientLink>
           </div>
 

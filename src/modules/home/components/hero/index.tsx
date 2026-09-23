@@ -5,23 +5,23 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 
 const banners = [
   {
-    title: "Aligarh Marketplace",
-    subtitle: "Your premier hyperlocal multi-vendor marketplace.",
-    tagline: "Powered by Deducia Inc.",
+    title: "Marketplace",
+    subtitle: "Your premier hyperlocal multi-vendor platform.",
+    tagline: "Verified Independent Sellers",
     cta: "Shop All Products",
     href: "/store",
     gradient: "from-slate-900 via-indigo-950 to-slate-900",
   },
   {
     title: "Trending Footwear Collection",
-    subtitle: "Sneakers, runners, and premium sandals from verified sellers.",
+    subtitle: "Sneakers, runners, and premium sandals from verified brands.",
     tagline: "Up to 40% Off Seasonal Styles",
     cta: "Explore Footwear",
     href: "/store",
     gradient: "from-blue-950 via-slate-900 to-cyan-950",
   },
   {
-    title: "Express Delivery Across Aligarh",
+    title: "Express Delivery Everywhere",
     subtitle: "Fast local delivery and real-time inventory direct to your door.",
     tagline: "Reliable Shipping Nationwide",
     cta: "Order Now",
@@ -38,7 +38,7 @@ const banners = [
   },
   {
     title: "Exclusive Launch Discounts",
-    subtitle: "Use exclusive promotion codes on selected categories this week.",
+    subtitle: "Use verified promotion codes on selected categories this week.",
     tagline: "Limited Time Offers",
     cta: "Claim Deals",
     href: "/store",
@@ -77,7 +77,7 @@ export default function Hero() {
           {banners[current].cta} →
         </LocalizedClientLink>
 
-        {/* Banner Navigation Indicators */}
+        {/* Indicators */}
         <div className="absolute bottom-4 right-8 flex gap-2">
           {banners.map((_, idx) => (
             <button

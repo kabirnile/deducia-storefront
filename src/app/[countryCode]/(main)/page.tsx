@@ -7,8 +7,8 @@ import ProductPreview from "@modules/products/components/product-preview"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export const metadata: Metadata = {
-  title: "Aligarh Marketplace | Powered by Deducia Inc.",
-  description: "Hyperlocal multi-vendor marketplace powered by Deducia Inc.",
+  title: "Marketplace | Multi-Vendor Store",
+  description: "Premier multi-vendor marketplace connecting verified independent sellers.",
 }
 
 export default async function Home(props: {
@@ -36,23 +36,21 @@ export default async function Home(props: {
       {/* 1. HERO 5-BANNER CAROUSEL */}
       <Hero />
 
-      {/* 2. CATEGORIES SECTION */}
+      {/* 2. EXPLORE CATEGORIES */}
       {categories && categories.length > 0 && (
         <section className="content-container">
-          <div className="flex justify-between items-end mb-6">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
-                Explore Categories
-              </h2>
-              <p className="text-sm text-neutral-500 mt-1">
-                Shop curated selections from vendors across the region
-              </p>
-            </div>
+          <div className="flex flex-col items-start gap-y-2 mb-6">
+            <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
+              Explore Categories
+            </h2>
+            <p className="text-sm text-neutral-500">
+              Shop curated selections from verified marketplace sellers
+            </p>
             <LocalizedClientLink
               href="/store"
-              className="text-xs font-semibold text-neutral-700 hover:text-neutral-900 underline underline-offset-4"
+              className="mt-1 inline-flex items-center justify-center px-4 py-2 bg-black hover:bg-neutral-900 text-white text-xs font-semibold rounded-md transition-colors shadow-sm"
             >
-              View all
+              View All
             </LocalizedClientLink>
           </div>
 
@@ -73,20 +71,21 @@ export default async function Home(props: {
         </section>
       )}
 
-      {/* 3. ALL PRODUCTS CATALOG GRID */}
+      {/* 3. ALL PRODUCTS */}
       <section className="content-container">
-        <div className="flex justify-between items-end mb-6">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
-              All Products
-            </h2>
-            <p className="text-sm text-neutral-500 mt-1">
-              Browse the entire multi-vendor inventory available for your region
-            </p>
-          </div>
-          <span className="text-xs font-medium text-neutral-500">
-            Showing {response?.products?.length || 0} products
-          </span>
+        <div className="flex flex-col items-start gap-y-2 mb-6">
+          <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
+            All Products
+          </h2>
+          <p className="text-sm text-neutral-500">
+            Browse the entire multi-vendor catalog ({response?.products?.length || 0} products available)
+          </p>
+          <LocalizedClientLink
+            href="/store"
+            className="mt-1 inline-flex items-center justify-center px-4 py-2 bg-black hover:bg-neutral-900 text-white text-xs font-semibold rounded-md transition-colors shadow-sm"
+          >
+            View All
+          </LocalizedClientLink>
         </div>
 
         <div

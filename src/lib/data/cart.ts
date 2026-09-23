@@ -165,7 +165,12 @@ export async function deleteLineItem(lineId: string) {
 }
 
 export async function setShippingMethod({ cartId, shippingMethodId }: { cartId: string; shippingMethodId: string }) {
-  const headers = { ...(await getAuthHeaders()) }
+  const headers = {
+    ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
+  }
 
   return sdk.store.cart
     .addShippingMethod(cartId, { option_id: shippingMethodId }, {}, headers)
@@ -176,7 +181,12 @@ export async function setShippingMethod({ cartId, shippingMethodId }: { cartId: 
 }
 
 export async function initiatePaymentSession(cart: HttpTypes.StoreCart, data: HttpTypes.StoreInitializePaymentSession) {
-  const headers = { ...(await getAuthHeaders()) }
+  const headers = {
+    ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
+  }
 
   return sdk.store.payment
     .initiatePaymentSession(cart, data, {}, headers)
@@ -271,27 +281,54 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
   redirect(`/${formData.get("shipping_address.country_code")}/checkout?step=delivery`)
 }
 
+/**
+ * Places an order for a cart and redirects cleanly to the order confirmed screen
+ */
 export async function placeOrder(cartId?: string) {
   const id = cartId || (await getCartId())
   if (!id) throw new Error("No existing cart found when placing an order")
 
-  const headers = { ...(await getAuthHeaders()) }
-
-  const cartRes = await sdk.store.cart
-    .complete(id, {}, headers)
-    .then(async (cartRes) => {
-      revalidateTag(await getCacheTag("carts"))
-      return cartRes
-    })
-    .catch(medusaError)
-
-  if (cartRes?.type === "order") {
-    const countryCode = cartRes.order.shipping_address?.country_code?.toLowerCase()
-    revalidateTag(await getCacheTag("orders"))
-    removeCartId()
-    redirect(`/${countryCode}/order/${cartRes?.order.id}/confirmed`)
+  const headers = {
+    ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
-  return cartRes.cart
+
+  let cartRes: any = null
+  try {
+    cartRes = await sdk.client.fetch<any>(`/store/carts/${id}/complete`, {
+      method: "POST",
+      headers,
+    })
+  } catch (err: any) {
+    throw new Error(medusaError(err))
+  }
+
+  // Clear cart cache
+  revalidateTag(await getCacheTag("carts"))
+  revalidateTag(await getCacheTag("orders"))
+
+  // Resolve Order ID across Medusa v2 and Mercur multi-vendor payload structures
+  const order =
+    cartRes?.order ||
+    (Array.isArray(cartRes?.orders) ? cartRes.orders[0] : null) ||
+    (cartRes?.type === "order" ? cartRes.order : null) ||
+    cartRes
+
+  const orderId = order?.id || (cartRes?.id?.startsWith("order_") ? cartRes.id : null)
+
+  if (orderId) {
+    const countryCode =
+      order?.shipping_address?.country_code?.toLowerCase() ||
+      order?.billing_address?.country_code?.toLowerCase() ||
+      "in"
+
+    await removeCartId()
+    redirect(`/${countryCode}/order/${orderId}/confirmed`)
+  }
+
+  return cartRes?.cart || cartRes
 }
 
 export async function updateRegion(countryCode: string, currentPath: string) {
@@ -330,7 +367,6 @@ export async function listCartOptions() {
       if (Array.isArray(res)) return res
       if (Array.isArray(res?.shipping_options)) return res.shipping_options
 
-      // Flatten multi-vendor grouped payload
       if (res?.shipping_options && typeof res.shipping_options === "object") {
         const flattenedOptions: HttpTypes.StoreCartShippingOption[] = []
         Object.values(res.shipping_options).forEach((vendorOptions: any) => {
