@@ -7,7 +7,8 @@ import { Button } from "@medusajs/ui"
 import Divider from "@modules/common/components/divider"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
 import { isEqual } from "lodash"
-import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
 import MobileActions from "./mobile-actions"
@@ -37,6 +38,7 @@ export default function ProductActions({
 
   const [options, setOptions] = useState<Record<string, string | undefined>>({})
   const [isAdding, setIsAdding] = useState(false)
+  const [isAdded, setIsAdded] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const countryCode = useParams().countryCode as string
 
@@ -61,6 +63,7 @@ export default function ProductActions({
 
   const setOptionValue = (optionId: string, value: string) => {
     setErrorMessage(null)
+    setIsAdded(false)
     setOptions((prev) => ({
       ...prev,
       [optionId]: value,
@@ -91,7 +94,7 @@ export default function ProductActions({
     router.replace(pathname + "?" + params.toString())
   }, [selectedVariant, isValidVariant])
 
-  // Always consider variant in stock once selected
+  // Inventory tracking logic
   const inStock = useMemo(() => {
     if (!selectedVariant) return false
     if (!selectedVariant.manage_inventory) return true
@@ -117,6 +120,10 @@ export default function ProductActions({
         quantity: 1,
         countryCode,
       })
+      setIsAdded(true)
+      setTimeout(() => {
+        setIsAdded(false)
+      }, 5000)
     } catch (err: any) {
       console.error("Cart addition failed:", err)
       setErrorMessage(err?.message || "Failed to add to cart. Check server logs.")
@@ -133,8 +140,11 @@ export default function ProductActions({
     if (!inStock || !isValidVariant) {
       return "Out of stock"
     }
+    if (isAdded) {
+      return "Added to cart ✓"
+    }
     return "Add to cart"
-  }, [selectedVariant, inStock, isValidVariant])
+  }, [selectedVariant, inStock, isValidVariant, isAdded])
 
   return (
     <>
@@ -173,12 +183,29 @@ export default function ProductActions({
             !isValidVariant
           }
           variant="primary"
-          className="w-full h-10"
+          className={`w-full h-10 transition-colors duration-200 ${
+            isAdded ? "!bg-emerald-600 hover:!bg-emerald-700 !text-white" : ""
+          }`}
           isLoading={isAdding}
           data-testid="add-product-button"
         >
           {buttonText}
         </Button>
+
+        {/* GO TO CART POPUP BANNER */}
+        {isAdded && (
+          <div className="mt-2 p-3 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
+            <span className="text-xs font-semibold text-emerald-800">
+              ✓ Item added to your cart!
+            </span>
+            <Link
+              href={`/${countryCode}/cart`}
+              className="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-md transition-colors"
+            >
+              Go to cart →
+            </Link>
+          </div>
+        )}
 
         {errorMessage && (
           <p className="text-rose-600 text-xs mt-1 text-center font-medium">

@@ -138,7 +138,7 @@ export async function addToCart({
       : {}),
   }
 
-  // 1. Resolve the multi-vendor offer for this variant from Mercur /store/offers
+  // 1. Fetch multi-vendor offer for this variant from Mercur /store/offers
   let offerId: string | null = null
   try {
     const offerRes = await sdk.client.fetch<{ offers: { id: string }[] }>(
@@ -286,23 +286,27 @@ export async function applyPromotions(codes: string[]) {
   const cartId = await getCartId()
 
   if (!cartId) {
-    throw new Error("No existing cart found")
+    return "No existing cart found"
   }
 
   const headers = {
     ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
-  return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      revalidateTag(cartCacheTag)
+  try {
+    await sdk.store.cart.update(cartId, { promo_codes: codes }, {}, headers)
+    const cartCacheTag = await getCacheTag("carts")
+    revalidateTag(cartCacheTag)
 
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      revalidateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
+    const fulfillmentCacheTag = await getCacheTag("fulfillment")
+    revalidateTag(fulfillmentCacheTag)
+    return null
+  } catch (err: any) {
+    return err?.message || "Invalid promotion code"
+  }
 }
 
 export async function applyGiftCard(code: string) {}
@@ -320,7 +324,10 @@ export async function submitPromotionForm(
     return "Please enter a promotion code"
   }
   try {
-    await applyPromotions([code])
+    const errorMsg = await applyPromotions([code])
+    if (errorMsg) {
+      return errorMsg
+    }
     return null
   } catch (e: any) {
     return e?.message || "Invalid promotion code"
