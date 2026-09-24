@@ -1,66 +1,82 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import medusaError from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
-import { getCacheOptions } from "./cookies"
+import { getAuthHeaders } from "./cookies"
+
+const fallbackIndiaRegion: HttpTypes.StoreRegion = {
+  id: "reg_in_default",
+  name: "India",
+  currency_code: "inr",
+  countries: [
+    {
+      id: "ctry_in",
+      iso_2: "in",
+      iso_3: "ind",
+      num_code: "356",
+      name: "India",
+      display_name: "India",
+      region_id: "reg_in_default",
+    } as any,
+  ],
+  automatic_taxes: false,
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+}
 
 export const listRegions = async () => {
-  const next = {
-    ...(await getCacheOptions("regions")),
+  const headers = {
+    ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
   return sdk.client
     .fetch<{ regions: HttpTypes.StoreRegion[] }>(`/store/regions`, {
       method: "GET",
-      next,
-      cache: "force-cache",
+      headers,
+      cache: "no-store",
     })
-    .then(({ regions }) => regions)
-    .catch(medusaError)
+    .then(({ regions }) => {
+      if (Array.isArray(regions) && regions.length > 0) {
+        return regions.map((r) => {
+          if (!r.countries || r.countries.length === 0) {
+            r.countries = fallbackIndiaRegion.countries
+          }
+          return r
+        })
+      }
+      return [fallbackIndiaRegion]
+    })
+    .catch(() => [fallbackIndiaRegion])
 }
 
 export const retrieveRegion = async (id: string) => {
-  const next = {
-    ...(await getCacheOptions(["regions", id].join("-"))),
+  const headers = {
+    ...(await getAuthHeaders()),
+    ...(process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+      ? { "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY }
+      : {}),
   }
 
   return sdk.client
     .fetch<{ region: HttpTypes.StoreRegion }>(`/store/regions/${id}`, {
       method: "GET",
-      next,
-      cache: "force-cache",
+      headers,
+      cache: "no-store",
     })
     .then(({ region }) => region)
-    .catch(medusaError)
+    .catch(() => fallbackIndiaRegion)
 }
 
-const regionMap = new Map<string, HttpTypes.StoreRegion>()
-
 export const getRegion = async (countryCode: string) => {
-  try {
-    if (regionMap.has(countryCode)) {
-      return regionMap.get(countryCode)
-    }
+  const regions = await listRegions()
+  const cleanCode = (countryCode || "in").toLowerCase()
 
-    const regions = await listRegions()
+  const found = regions.find((r) =>
+    r.countries?.some((c) => c.iso_2?.toLowerCase() === cleanCode)
+  )
 
-    if (!regions) {
-      return null
-    }
-
-    regions.forEach((region) => {
-      region.countries?.forEach((c) => {
-        regionMap.set(c?.iso_2 ?? "", region)
-      })
-    })
-
-    const region = countryCode
-      ? regionMap.get(countryCode)
-      : regionMap.get("us")
-
-    return region
-  } catch (e: any) {
-    return null
-  }
+  return found || regions[0] || fallbackIndiaRegion
 }

@@ -6,11 +6,11 @@ import Hero from "@modules/home/components/hero"
 import ProductPreview from "@modules/products/components/product-preview"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-export const revalidate = 0 // Never serve stale cache: always live data
+export const revalidate = 0
 
 export const metadata: Metadata = {
-  title: "Marketplace | Multi-Vendor Store",
-  description: "Premier multi-vendor marketplace connecting verified independent sellers.",
+  title: "Marketplace | 10-Minute Hyperlocal Delivery",
+  description: "Order fresh essentials, electronics, and lifestyle goods with instant local delivery.",
 }
 
 export default async function Home(props: {
@@ -27,49 +27,47 @@ export default async function Home(props: {
     countryCode,
     queryParams: {
       limit: 100,
-      fields: "*variants.calculated_price,*thumbnail,*images",
+      fields: "*variants.calculated_price,+variants.inventory_quantity,*thumbnail,*images",
     },
   })
 
-  if (!region) {
-    return null
-  }
-
   return (
-    <div className="w-full flex flex-col gap-y-12 pb-16">
-      {/* 1. HERO 5-BANNER CAROUSEL WITH FIND PRODUCTS */}
+    <div className="w-full flex flex-col gap-y-6 pb-20 bg-neutral-50/50 min-h-screen">
+      {/* 1. VISUAL HERO & INSTANT STRIP */}
       <Hero />
 
-      {/* 2. EXPLORE CATEGORIES */}
+      {/* 2. DYNAMIC LIVE CATEGORIES (BLINKIT HORIZONTAL / GRID) */}
       {categories && categories.length > 0 && (
         <section className="content-container">
-          <div className="flex flex-col items-start gap-y-2 mb-6">
-            <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
-              Explore Categories
-            </h2>
-            <p className="text-sm text-neutral-500">
-              Shop curated selections from verified marketplace sellers
-            </p>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-neutral-900 tracking-tight">
+                Shop by Category
+              </h2>
+              <span className="text-xs text-neutral-500 font-medium">
+                Live from verified vendors
+              </span>
+            </div>
             <LocalizedClientLink
               href="/store"
-              className="mt-1 inline-flex items-center justify-center px-4 py-2 bg-black hover:bg-neutral-900 text-white text-xs font-semibold rounded-md transition-colors shadow-sm"
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-900"
             >
-              View All
+              See All →
             </LocalizedClientLink>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-            {categories.slice(0, 8).map((cat) => (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2.5 sm:gap-3">
+            {categories.map((cat) => (
               <LocalizedClientLink
                 key={cat.id}
                 href={`/categories/${cat.handle}`}
-                className="p-4 bg-white hover:bg-neutral-50 rounded-xl border border-neutral-300 transition-all flex flex-col justify-between h-24 shadow-sm hover:border-neutral-900 group"
+                className="flex flex-col items-center justify-center p-3 bg-white border border-neutral-200/80 rounded-xl hover:border-emerald-600 hover:shadow-sm transition-all group text-center aspect-[1/1]"
               >
-                <span className="font-bold text-sm sm:text-base text-neutral-950 group-hover:text-black">
-                  {cat.name || cat.handle}
-                </span>
-                <span className="text-xs font-semibold text-neutral-600 group-hover:text-black">
-                  Shop category →
+                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center text-base font-black group-hover:scale-110 transition-transform mb-2">
+                  {cat.name?.charAt(0) || "🛍"}
+                </div>
+                <span className="text-xs font-bold text-neutral-800 line-clamp-1 group-hover:text-emerald-700">
+                  {cat.name}
                 </span>
               </LocalizedClientLink>
             ))}
@@ -77,25 +75,27 @@ export default async function Home(props: {
         </section>
       )}
 
-      {/* 3. ALL PRODUCTS */}
+      {/* 3. DYNAMIC PRODUCTS GRID (BLINKIT COMPACT CARDS) */}
       <section className="content-container">
-        <div className="flex flex-col items-start gap-y-2 mb-6">
-          <h2 className="text-2xl font-bold tracking-tight text-neutral-900">
-            All Products
-          </h2>
-          <p className="text-sm text-neutral-500">
-            Browse the entire multi-vendor catalog ({response?.products?.length || 0} products available)
-          </p>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-neutral-900 tracking-tight">
+              All Products
+            </h2>
+            <span className="text-xs text-neutral-500 font-medium">
+              {response?.products?.length || 0} items available for delivery
+            </span>
+          </div>
           <LocalizedClientLink
             href="/store"
-            className="mt-1 inline-flex items-center justify-center px-4 py-2 bg-black hover:bg-neutral-900 text-white text-xs font-semibold rounded-md transition-colors shadow-sm"
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-900"
           >
-            View All
+            Full Catalog →
           </LocalizedClientLink>
         </div>
 
         <div
-          className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4"
           data-testid="products-list"
         >
           {response?.products && response.products.length > 0 ? (
@@ -107,9 +107,15 @@ export default async function Home(props: {
               />
             ))
           ) : (
-            <p className="text-sm text-neutral-500 col-span-full">
-              No products found in this region.
-            </p>
+            <div className="col-span-full py-16 text-center bg-white border border-dashed border-neutral-300 rounded-2xl p-6">
+              <span className="text-3xl block mb-2">📦</span>
+              <p className="text-sm font-bold text-neutral-800">
+                Fresh Catalog Synchronizing
+              </p>
+              <p className="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">
+                No items uploaded yet. When an onboarded merchant publishes items in their Seller Portal, they appear here live.
+              </p>
+            </div>
           )}
         </div>
       </section>
