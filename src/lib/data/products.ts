@@ -7,10 +7,6 @@ import { SortOptions } from "@modules/store/components/refinement-list/sort-prod
 import { getAuthHeaders } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
 
-/**
- * Universally sanitizes any image URL containing localhost:9000 or 127.0.0.1:9000
- * to the live backend domain (https://api.nearsy.store).
- */
 function cleanUrl(url?: string | null): string | null {
   if (!url) return null
   return url
@@ -18,10 +14,6 @@ function cleanUrl(url?: string | null): string | null {
     .replace(/http:\/\/127\.0\.0\.1:9000/g, "https://api.nearsy.store")
 }
 
-/**
- * Recursively ensures all product images, thumbnails, and variant assets
- * are clean, accessible live URLs.
- */
 function sanitizeProductAssets(product: HttpTypes.StoreProduct): HttpTypes.StoreProduct {
   if (!product) return product
 
@@ -61,7 +53,7 @@ export const listProducts = async ({
   regionId,
 }: {
   pageParam?: number
-  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams & { q?: string }
+  queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductListParams & { q?: string; category_id?: string[] }
   countryCode?: string
   regionId?: string
 }): Promise<{
@@ -109,21 +101,34 @@ export const listProducts = async ({
           offset,
           region_id: region?.id,
           fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*thumbnail,*images,+metadata,+tags",
+            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*thumbnail,*images,+metadata,+tags,*categories",
           ...queryParams,
         },
         headers,
-        cache: "no-store", // Universal sync: never serves stale product cache
+        cache: "no-store",
       }
     )
     .then(({ products, count }) => {
+      let cleanProducts = (products || []).map(sanitizeProductAssets)
+
+      // Fallback substring search across title, description, and handle
+      if (queryParams?.q && queryParams.q.trim().length > 0) {
+        const searchTerm = queryParams.q.toLowerCase().trim()
+        cleanProducts = cleanProducts.filter(
+          (p) =>
+            p.title?.toLowerCase().includes(searchTerm) ||
+            p.description?.toLowerCase().includes(searchTerm) ||
+            p.handle?.toLowerCase().includes(searchTerm) ||
+            p.categories?.some((c) => c.name?.toLowerCase().includes(searchTerm))
+        )
+      }
+
       const nextPage = count > offset + limit ? pageParam + 1 : null
-      const cleanProducts = (products || []).map(sanitizeProductAssets)
 
       return {
         response: {
           products: cleanProducts,
-          count,
+          count: cleanProducts.length,
         },
         nextPage,
         queryParams,
@@ -139,10 +144,6 @@ export const listProducts = async ({
     })
 }
 
-/**
- * Fetches products live from backend, applies universal asset sanitization,
- * sorts them dynamically, and handles pagination.
- */
 export const listProductsWithSort = async ({
   page = 0,
   queryParams,
@@ -185,4 +186,30 @@ export const listProductsWithSort = async ({
     nextPage,
     queryParams,
   }
+}
+
+/**
+ * Live instant search suggestions with product thumbnails and pricing
+ */
+export async function searchInstantProducts({
+  query,
+  countryCode,
+  limit = 6,
+}: {
+  query: string
+  countryCode: string
+  limit?: number
+}) {
+  const trimmed = query?.trim()
+  if (!trimmed || trimmed.length === 0) return []
+
+  const { response } = await listProducts({
+    countryCode,
+    queryParams: {
+      limit: 50,
+      q: trimmed,
+    },
+  })
+
+  return (response.products || []).slice(0, limit)
 }

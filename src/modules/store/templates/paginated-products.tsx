@@ -1,17 +1,18 @@
 import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
-import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
+import ProductPreview from "@modules/products/components/product-preview"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 const PRODUCT_LIMIT = 12
 
 type PaginatedProductsParams = {
-  limit: number
+  limit?: number
   collection_id?: string[]
   category_id?: string[]
   id?: string[]
   order?: string
+  q?: string
 }
 
 export default async function PaginatedProducts({
@@ -21,6 +22,7 @@ export default async function PaginatedProducts({
   categoryId,
   productsIds,
   countryCode,
+  q,
 }: {
   sortBy?: SortOptions
   page: number
@@ -28,9 +30,10 @@ export default async function PaginatedProducts({
   categoryId?: string
   productsIds?: string[]
   countryCode: string
+  q?: string
 }) {
   const queryParams: PaginatedProductsParams = {
-    limit: 12,
+    limit: PRODUCT_LIMIT,
   }
 
   if (collectionId) {
@@ -45,8 +48,8 @@ export default async function PaginatedProducts({
     queryParams["id"] = productsIds
   }
 
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
+  if (q) {
+    queryParams["q"] = q
   }
 
   const region = await getRegion(countryCode)
@@ -55,7 +58,7 @@ export default async function PaginatedProducts({
     return null
   }
 
-  let {
+  const {
     response: { products, count },
   } = await listProductsWithSort({
     page,

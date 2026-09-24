@@ -18,49 +18,62 @@ export default async function RelatedProducts({
     return null
   }
 
-  // edit this function to define your related products logic
-  const queryParams: HttpTypes.StoreProductListParams = {}
-  if (region?.id) {
-    queryParams.region_id = region.id
-  }
-  if (product.collection_id) {
-    queryParams.collection_id = [product.collection_id]
-  }
-  if (product.tags) {
-    queryParams.tag_id = product.tags
-      .map((t) => t.id)
-      .filter(Boolean) as string[]
-  }
-  queryParams.is_giftcard = false
+  // Extract category IDs for the current product
+  const categoryIds = (product.categories || []).map((c) => c.id).filter(Boolean)
 
-  const products = await listProducts({
+  const queryParams: any = {
+    limit: 20,
+  }
+
+  // Strictly filter by category if the product belongs to any category
+  if (categoryIds.length > 0) {
+    queryParams["category_id"] = categoryIds
+  } else if (product.collection_id) {
+    queryParams["collection_id"] = [product.collection_id]
+  }
+
+  // Fetch candidate products live from backend (cache: "no-store")
+  let { response } = await listProducts({
     queryParams,
     countryCode,
-  }).then(({ response }) => {
-    return response.products.filter(
-      (responseProduct) => responseProduct.id !== product.id
-    )
   })
 
-  if (!products.length) {
+  // Exclude current active product
+  let suggested = (response.products || []).filter((p) => p.id !== product.id)
+
+  // If category has fewer than 4 products, fallback to latest new store products
+  if (suggested.length < 4) {
+    const fallbackRes = await listProducts({
+      queryParams: { limit: 12 },
+      countryCode,
+    })
+    const additional = (fallbackRes.response.products || []).filter(
+      (p) => p.id !== product.id && !suggested.some((s) => s.id === p.id)
+    )
+    suggested = [...suggested, ...additional]
+  }
+
+  const finalProducts = suggested.slice(0, 4)
+
+  if (!finalProducts.length) {
     return null
   }
 
   return (
     <div className="product-page-constraint">
-      <div className="flex flex-col items-center text-center mb-16">
-        <span className="text-base-regular text-gray-600 mb-6">
-          Related products
+      <div className="flex flex-col items-center text-center mb-12">
+        <span className="text-xs font-bold text-neutral-500 uppercase tracking-widest mb-2">
+          Related Products
         </span>
-        <p className="text-2xl-regular text-ui-fg-base max-w-lg">
-          You might also want to check out these products.
+        <p className="text-2xl font-bold tracking-tight text-neutral-900">
+          You might also like
         </p>
       </div>
 
       <ul className="grid grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-        {products.map((product) => (
-          <li key={product.id}>
-            <Product region={region} product={product} />
+        {finalProducts.map((p) => (
+          <li key={p.id}>
+            <Product product={p} region={region} />
           </li>
         ))}
       </ul>

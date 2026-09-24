@@ -4,14 +4,14 @@ import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import SideMenu from "@modules/layout/components/side-menu"
-import SearchBar from "@modules/layout/components/search-bar"
+import SearchModal from "@modules/layout/components/search-modal"
 
 export default async function Nav() {
   const regions = await listRegions().then((regions: StoreRegion[]) => regions)
 
   return (
     <div className="sticky top-0 inset-x-0 z-50 group">
-      {/* 1. TOP STRIP */}
+      {/* 1. TOP SELL STRIP */}
       <div className="bg-neutral-950 text-white text-xs py-2 px-4 border-b border-neutral-800">
         <div className="content-container flex items-center justify-between mx-auto">
           <span className="text-neutral-400 text-xs hidden sm:inline">
@@ -30,7 +30,7 @@ export default async function Nav() {
         </div>
       </div>
 
-      {/* 2. MAIN HEADER */}
+      {/* 2. MAIN NAV HEADER */}
       <header className="relative h-16 mx-auto border-b duration-200 bg-white border-ui-border-base shadow-sm">
         <nav className="content-container txt-xsmall-plus text-ui-fg-subtle flex items-center justify-between w-full h-full text-small-regular">
           <div className="flex-1 basis-0 h-full flex items-center">
@@ -49,7 +49,10 @@ export default async function Nav() {
             </LocalizedClientLink>
           </div>
 
-          <div className="flex items-center gap-x-6 h-full flex-1 basis-0 justify-end">
+          <div className="flex items-center gap-x-4 sm:gap-x-6 h-full flex-1 basis-0 justify-end">
+            {/* Apple-style search icon trigger */}
+            <SearchModal />
+
             <div className="hidden small:flex items-center gap-x-6 h-full">
               <LocalizedClientLink
                 className="hover:text-ui-fg-base"
@@ -75,13 +78,6 @@ export default async function Nav() {
           </div>
         </nav>
       </header>
-
-      {/* 3. UNIVERSAL SEARCH BAR STRIP */}
-      <div className="bg-white border-b border-neutral-200 py-2.5 px-4">
-        <div className="content-container mx-auto">
-          <SearchBar />
-        </div>
-      </div>
     </div>
   )
 }
